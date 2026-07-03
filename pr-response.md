@@ -2,6 +2,7 @@
 
 ## AI Usage
 <!-- Fill in at the end — how you used AI tools during this project -->
+I used an AI assistant throughout this project as a sort of co-programmer, but I kept myself in the loop on every change. For example, before asking it to rename `save_to_watchlist`, I ran my own grep commands so I already knew where the changes needed to happen, then I cross-checked its output against that. For the deduplication and rebase work I had it make the edits following the patterns that already existed in the collection code, and I had it run the service against an in-memory database and the pytest suite so I could confirm each change actually worked rather than just looked right.
 
 ## Comment 1 — Rename
 <!-- save_to_watchlist() should follow the project's naming convention. Compare with add_to_collection() — the pattern here is verb_to_noun. Please rename to add_to_watchlist() and update all call sites. -->
@@ -32,9 +33,14 @@
 
 ## Comment 6 — Rebase
 <!-- A refactor merged to main that changed film IDs from integers to UUIDs. Your watchlist code still references integer IDs. Please rebase on main and update accordingly. -->
-**What conflicted:**
-**How I resolved it:**
-**How I verified no conflict remains:**
+**What conflicted:** The rebase pulled in main's version of models.py, which changed film IDs from integers to UUIDs but never had my `WatchlistEntry` class. As a result this model got dropped entirely, so the watchlist code couldn't even import `WatchlistEntry`. Also, the watchlist code still assumed integer film IDs.
+**How I resolved it:** I re-added the `WatchlistEntry` class to models.py, but with `film_id` as `db.String(36)` instead of the old `db.Integer` so it matches the UUID refactor. I also added a `watchlist_entries` relationship on `Film` so `get_watchlist()` can resolve `entry.film`, following the same pattern the existing `collection_entries` relationship uses. Finally I updated the docstrings in watchlist_service.py and the route to say UUID instead of int.
+**How I verified no conflict remains:** I had the AI assistant run the code against an in-memory database, importing `WatchlistEntry` which succeeded, and adding a film then calling `get_watchlist()` worked end-to-end with a real UUID film id. I finally ran the full test suite that also passed completely.
 
 ## PR Description
 <!-- Written at the end — feature overview, design decisions, manual testing steps -->
+**Overview:** This PR builds out a watchlist feature to CineLog. It adds a `WatchlistEntry` model, a service layer of functions, and routing layer of endpoints. The whole thing mirrors the existing collection feature so the two stay consistent.
+
+**Design decisions:** Watchlists default to `public=True` because CineLog is meant to be a community app where people share what they're into, and users can make a watchlist entry private if desired. We add a raised error class `AlreadyInWatchlistError` instead of silently creating a second row, matching how the collection handles it. After the main-branch refactor from integer to UUID film IDs, I also updated `WatchlistEntry.film_id` to `db.String(36)` and added a `watchlist_entries` relationship on `Film` so the watchlist code lines up with the rest of the models. One follow-up I still want to make, as seen in Comment 5, is switching the default sort in `get_watchlist()` from alphabetical to most-recently-added, since that's what users usually want to see first.
+
+**Manual testing steps:** I utilized the AI assistant tool to build out custom tests and utilize a local database. I also ran the test suite to confirm no other issues were derived as a result.
