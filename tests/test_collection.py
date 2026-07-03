@@ -17,6 +17,7 @@ from services.collection_service import (
     AlreadyInCollectionError,
     NotInCollectionError,
 )
+from services.watchlist_service import add_to_watchlist
 
 
 @pytest.fixture
@@ -93,7 +94,7 @@ def test_add_to_collection_duplicate_raises(app, sample_user, sample_film):
         assert count == 1
 
 
-# ── Nonexistent film ─────────────────────────────────────────────────────────
+# ── Nonexistent film in collection ────────────────────────────────────────────────
 
 def test_add_to_collection_nonexistent_film_raises(app, sample_user):
     """
@@ -105,6 +106,19 @@ def test_add_to_collection_nonexistent_film_raises(app, sample_user):
 
         with pytest.raises(FilmNotFoundError):
             add_to_collection(user_id=sample_user, film_id=fake_film_id)
+
+# ── Nonexistent film in watchlist ─────────────────────────────────────────────────────────
+
+def test_add_to_watchlist_nonexistent_film_raises(app, sample_user):
+    """
+    Adding a film_id that doesn't exist in the database should raise
+    FilmNotFoundError, not a database integrity error.
+    """
+    with app.app_context():
+        fake_film_id = "00000000-0000-0000-0000-000000000000"
+
+        with pytest.raises(FilmNotFoundError):
+            add_to_watchlist(user_id=sample_user, film_id=fake_film_id)
 
 
 # ── get_collection sort order ────────────────────────────────────────────────
